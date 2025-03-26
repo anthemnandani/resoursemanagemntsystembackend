@@ -5,163 +5,95 @@ const cloudinary  = require("../utils/cloudnery");
 // Create Resource
 const createResource = async (req, res) => {
   try {
-    console.log('[DEBUG] Request received - headers:', req.headers);
-    console.log('[DEBUG] Request body:', req.body);
-    console.log('[DEBUG] Request files:', req.files);
-
-    // Verify Cloudinary configuration
-    console.log('[DEBUG] Cloudinary config:', {
-      cloud_name: cloudinary.config().cloud_name,
-      api_key: cloudinary.config().api_key ? '***REDACTED***' : 'MISSING'
-    });
-
-    const { name, type, customType, description, serialNumber } = req.body;
-
-    // Validate required fields with more detailed errors
-    const missingFields = [];
-    if (!name) missingFields.push('name');
-    if (!type) missingFields.push('type');
-    if (!serialNumber) missingFields.push('serialNumber');
+    const { name, type, customType, description, purchaseDate, status } = req.body;
     
-    if (missingFields.length > 0) {
-      console.log('[VALIDATION ERROR] Missing fields:', missingFields);
-      return res.status(400).json({ 
+    // Validate required fields
+    if (!name || !type || (type === 'other' && !customType)) {
+      return res.status(400).json({
         success: false,
-        error: 'Missing required fields',
-        missingFields
+        error: 'Required fields are missing'
       });
     }
 
-    // Default image configuration
-    const defaultImage = {
-      url: 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742876979/samples/computer.jpg',
-      public_id: 'default_resource'
-    };
-    let images = [defaultImage];
-    
-    // Handle image upload if present
-    if (req.files?.image) {
+    // Process image uploads directly to Cloudinary without temp files
+    let imageUploads = [];
+    if (req.files?.images) {
       try {
-        console.log('[DEBUG] Processing image upload...');
-        const file = req.files.image;
-        
-        // Verify file properties
-        console.log('[DEBUG] File details:', {
-          name: file.name,
-          size: file.size,
-          mimetype: file.mimetype,
-          tempFilePath: file.tempFilePath
-        });
-
-        if (!file.tempFilePath) {
-          throw new Error('No temp file path available');
-        }
-
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(file.tempFilePath, {
-          folder: "resources",
-          width: 800,
-          height: 600,
-          crop: "fill",
-          timeout: 30000 // 30 seconds timeout
-        });
-
-        if (!result?.secure_url) {
-          throw new Error('Cloudinary upload failed - no URL returned');
-        }
-
-        console.log('[DEBUG] Cloudinary upload success:', {
-          url: result.secure_url,
-          size: result.bytes,
-          format: result.format
-        });
-
-        images = [{
-          url: result.secure_url,
-          public_id: result.public_id
-        }];
+        // Upload all images in parallel
+        imageUploads = await Promise.all(
+          req.files.images.map(file => {
+            return new Promise((resolve, reject) => {
+              const uploadStream = cloudinary.uploader.upload_stream(
+                {
+                  folder: "resources",
+                  resource_type: 'auto'
+                },
+                (error, result) => {
+                  if (error) reject(error);
+                  else resolve({
+                    url: result.secure_url,
+                    public_id: result.public_id
+                  });
+                }
+              );
+              
+              // Convert buffer to stream and upload directly
+              const bufferStream = require('stream').Readable.from(file.buffer);
+              bufferStream.pipe(uploadStream);
+            });
+          })
+        );
       } catch (uploadError) {
-        console.error('[UPLOAD ERROR] Failed to upload image:', {
-          message: uploadError.message,
-          stack: uploadError.stack,
-          code: uploadError.code
+        console.error('Image upload failed:', uploadError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to upload images'
         });
-        // Continue with default image but log warning
-        console.warn('[FALLBACK] Using default image due to upload failure');
       }
     }
 
-    // Check for existing resource with more detailed query
-    const existingResource = await Resource.findOne({ serialNumber }).lean();
-    if (existingResource) {
-      console.log('[CONFLICT] Duplicate serial number:', serialNumber);
-      return res.status(400).json({ 
-        success: false,
-        error: 'Serial number already exists',
-        conflictingId: existingResource._id
-      });
-    }
-
-    // Create new resource with transaction for safety
-    const session = await mongoose.startSession();
-    session.startTransaction();
-    
-    try {
-      const resource = new Resource({
-        name,
-        type,
-        ...(type === 'other' && { customType }),
-        description,
-        serialNumber,
-        images
-      });
-
-      await resource.save({ session });
-      await session.commitTransaction();
-      
-      console.log('[SUCCESS] Resource created:', resource._id);
-
-      res.status(201).json({
-        success: true,
-        message: "Resource created successfully",
-        data: resource
-      });
-    } catch (dbError) {
-      await session.abortTransaction();
-      throw dbError;
-    } finally {
-      session.endSession();
-    }
-
-  } catch (error) {
-    console.error('[CRITICAL ERROR] Resource creation failed:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code,
-      type: typeof error
+    // Create new resource (serialNumber will auto-increment)
+    const resource = new Resource({
+      name,
+      type,
+      customType: type === 'other' ? customType : undefined,
+      description: description || undefined,
+      purchaseDate: purchaseDate || new Date(),
+      status: status || 'available',
+      images: imageUploads
     });
 
-    // Special handling for specific error types
-    if (error.name === 'MongoServerError') {
-      console.error('[DATABASE ERROR] MongoDB error details:', {
-        code: error.code,
-        codeName: error.codeName,
-        keyPattern: error.keyPattern,
-        keyValue: error.keyValue
+    await resource.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Resource created successfully",
+      data: resource
+    });
+
+  } catch (error) {
+    console.error('Resource creation error:', error);
+    
+    // Handle duplicate key error (shouldn't happen with auto-increment)
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Resource with this serial number already exists'
       });
     }
-
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: Object.values(error.errors).map(err => err.message)
+      });
+    }
+    
     res.status(500).json({
       success: false,
-      error: 'Internal server error',
-      details: process.env.NODE_ENV === 'development' ? {
-        message: error.message,
-        type: error.name,
-        stack: error.stack
-      } : undefined,
-      timestamp: new Date().toISOString(),
-      requestId: req.id || 'none'
+      error: 'Internal server error'
     });
   }
 };
@@ -271,7 +203,3 @@ module.exports = {
   updateResource,
   deleteResource
 };
-
-
-
-
