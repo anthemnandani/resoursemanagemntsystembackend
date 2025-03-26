@@ -2,11 +2,10 @@ const Resource = require('../models/resource');
 const Allocation = require('../models/allocation');
 const cloudinary  = require("../utils/cloudnery");
 
-// Create Resource
 const createResource = async (req, res) => {
   try {
-    const { name, type, customType, description, purchaseDate, status } = req.body;
-    
+    const { name, type, customType, description, purchaseDate, status, serialNumber } = req.body;
+
     // Validate required fields
     if (!name || !type || (type === 'other' && !customType)) {
       return res.status(400).json({
@@ -15,30 +14,28 @@ const createResource = async (req, res) => {
       });
     }
 
-    // Process image uploads directly to Cloudinary without temp files
+    // Handle file upload to Cloudinary if an image is provided
     let imageUploads = [];
     if (req.files?.images) {
       try {
-        // Upload all images in parallel
         imageUploads = await Promise.all(
           req.files.images.map(file => {
             return new Promise((resolve, reject) => {
               const uploadStream = cloudinary.uploader.upload_stream(
                 {
                   folder: "resources",
-                  resource_type: 'auto'
+                  resource_type: 'auto',
                 },
                 (error, result) => {
                   if (error) reject(error);
                   else resolve({
-                    url: result.secure_url,
+                    url: result.secure_url, 
                     public_id: result.public_id
                   });
                 }
               );
-              
-              // Convert buffer to stream and upload directly
-              const bufferStream = require('stream').Readable.from(file.buffer);
+
+              const bufferStream = require('stream').Readable.from(file.data);
               bufferStream.pipe(uploadStream);
             });
           })
@@ -47,12 +44,11 @@ const createResource = async (req, res) => {
         console.error('Image upload failed:', uploadError);
         return res.status(500).json({
           success: false,
-          error: 'Failed to upload images'
+          error: 'Failed to upload image'
         });
       }
     }
 
-    // Create new resource (serialNumber will auto-increment)
     const resource = new Resource({
       name,
       type,
@@ -60,7 +56,8 @@ const createResource = async (req, res) => {
       description: description || undefined,
       purchaseDate: purchaseDate || new Date(),
       status: status || 'available',
-      images: imageUploads
+      serialNumber: serialNumber || undefined,
+      images: imageUploads,
     });
 
     await resource.save();
@@ -73,16 +70,14 @@ const createResource = async (req, res) => {
 
   } catch (error) {
     console.error('Resource creation error:', error);
-    
-    // Handle duplicate key error (shouldn't happen with auto-increment)
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         error: 'Resource with this serial number already exists'
       });
     }
-    
-    // Handle validation errors
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -90,13 +85,14 @@ const createResource = async (req, res) => {
         details: Object.values(error.errors).map(err => err.message)
       });
     }
-    
+
     res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
   }
 };
+
 
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {
