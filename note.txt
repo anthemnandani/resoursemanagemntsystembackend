@@ -1,0 +1,97 @@
+employee table:
+  "_id": "ObjectId",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "position": "MERN stack developer"
+  "department": "IT",
+  "contact": "+1234567890",
+  "hireDate": "",
+  "status": "active/inactive",
+  "profilePicture": "",
+  "isDeleted":"default false",
+
+
+resourse table:
+"_id": "ObjectId",
+"name": 'INBOOK i3 MAX',
+"type": 'laptop/mouse/phone/keyboard/monitor/other',
+"description": "",
+"images": "we can upload multiple images",
+"serialNumber": "1/2/3",
+"purchaseDate":,
+"status": ['available', 'allocated', 'maintenance'],
+"isDeleted": "default false",
+
+
+Allocation table: 
+"employee":"employee id"
+"resource": "resource id"
+"description": "",
+"allocatedDate":
+"returnDate":
+"status": ['active', 'returned']
+
+
+
+
+
+  create employee route(method:post) = http://localhost:5000/api/employees/createemployee
+  update employee route(method:put) = http://localhost:5000/api/employees/67e39f153df598136a8b7917
+  get single employee if not deleted(method:get) = http://localhost:5000/api/employees/67e395d663398fcbe7d7a936
+  get single all employee if not deleted(method:get) = http://localhost:5000/api/employees
+  soft delete employee route route(method:delete) = http://localhost:5000/api/employees/67e395d663398fcbe7d7a936
+  
+  create resourse route = http://localhost:5000/api/resources/createresourse
+  get all resourse route = http://localhost:5000/api/resources
+
+  admin login route = http://localhost:5000/api/admin/login
+  admin register route = http://localhost:5000/api/admin/register
+
+
+
+admin schema
+  {
+    "_id":{"$oid":"67e29a952bd209a23cb79cde"},
+    "name":"admin",
+    "email":"admin@gamil.com",
+    "password":"$2b$10$D/xF4nML01Idcm1Pib/VZ.SqRcOyiO3ADwsjGx4lxUWAsakY55Kpy",
+    "phone":"322314345",
+    "role":"CEO",
+    "createdAt":{"$date":{"$numberLong":"1742903957214"}},
+    "updatedAt":{"$date":{"$numberLong":"1742903957214"}}
+  }
+
+
+employee schema
+  {
+    "_id":{"$oid":"67e395d663398fcbe7d7a936"},
+    "name":"nandani",
+    "email":"nks8543@gmail.com",
+    "position":"MERN stack developer",
+    "department":"IT",
+    "status":"inactive",
+    "profilePicture":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png",
+    "isDeleted":true,
+    "hireDate":{"$date":{"$numberLong":"1742968278819"}},
+    "createdAt":{"$date":{"$numberLong":"1742968278820"}},
+    "updatedAt":{"$date":{"$numberLong":"1742971264810"}}
+    }
+
+
+    resourses schema
+    {
+      "_id":{"$oid":"67e27059c8f9b3fc70dfba0f"},
+      "name":"asus",
+      "type":"laptop",
+      "description":"this ia a laptop",
+      "images":[
+        {"url":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742893144/resources/c8addwenmhgfjdbgtreb.jpg","public_id":"resources/c8addwenmhgfjdbgtreb","_id":{"$oid":"67e27059c8f9b3fc70dfba10"}},
+        {"url":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742893145/resources/jlpc8hgnj7nlxvohrk5d.jpg","public_id":"resources/jlpc8hgnj7nlxvohrk5d","_id":{"$oid":"67e27059c8f9b3fc70dfba11"}},
+        {"url":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742893144/resources/gisb76jwgfzgltolsftv.jpg","public_id":"resources/gisb76jwgfzgltolsftv","_id":{"$oid":"67e27059c8f9b3fc70dfba12"}}
+        ],
+        "serialNumber":"9",
+        "status":"available","isDeleted":false,
+        "purchaseDate":{"$date":{"$numberLong":"1742893145377"}},
+        "createdAt":{"$date":{"$numberLong":"1742893145382"}},
+        "updatedAt":{"$date":{"$numberLong":"1742893145382"}}
+        }
