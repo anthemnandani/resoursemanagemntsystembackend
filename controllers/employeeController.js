@@ -6,26 +6,35 @@ const Allocation = require('../models/allocation');
 // Create Employee
 const createEmployee = async (req, res) => {
   try {
-    // console.log('Request body:', req.body);
-    // console.log('Request files:', req.files);
-
-    // default profile pic if not present
-    let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742876979/samples/woman-on-a-football-field.jpg';
+    let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742973540/employee_profiles/gifynr23tzunvk3g9pzk.png';
     
-    if (req.files?.profilePicture) {  // Changed from req.file to req.files
+    if (req.files?.profilePicture) {
       try {
         const file = req.files.profilePicture;
         
-        // Upload to Cloudinary using temp file path
-        const result = await cloudinary.uploader.upload(file.tempFilePath, {
-          folder: "employee_profiles",
-          width: 500,
-          height: 500,
-          crop: "fill"
+        // Convert buffer to stream and upload directly to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "employee_profiles",
+              width: 500,
+              height: 500,
+              crop: "fill"
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          
+          // Create stream from buffer and pipe to Cloudinary
+          const bufferStream = new require('stream').Readable();
+          bufferStream.push(file.data);
+          bufferStream.push(null);
+          bufferStream.pipe(uploadStream);
         });
 
         profilePictureUrl = result.secure_url;
-        // console.log('Uploaded profile picture url:', profilePictureUrl);
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
         return res.status(500).json({
@@ -46,7 +55,7 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // Checking for existing employee
+    // Check for existing employee
     const existingEmployee = await Employee.findOne({ email });
     if (existingEmployee) {
       return res.status(400).json({ 
@@ -55,7 +64,7 @@ const createEmployee = async (req, res) => {
       });
     }
 
-    // createing new employee
+    // Create new employee
     const employee = new Employee({
       name,
       email,
@@ -92,10 +101,10 @@ const createEmployee = async (req, res) => {
   }
 };
 
-// Get All Employees (excluding deleted)
+// Get All Employees
 const getAllEmployees = async (req, res) => {
   try {
-    const employees = await Employee.find({ isDeleted: false });
+    const employees = await Employee.find();
     res.json(employees);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -130,22 +139,31 @@ const updateEmployee = async (req, res) => {
       try {
         const file = req.files.profilePicture;
         
-        // Upload to Cloudinary
-        const result = await cloudinary.uploader.upload(file.tempFilePath, {
-          folder: "employee_profiles",
-          width: 500,
-          height: 500,
-          crop: "fill"
+        // Convert buffer to stream and upload directly to Cloudinary
+        const result = await new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              folder: "employee_profiles",
+              width: 500,
+              height: 500,
+              crop: "fill"
+            },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result);
+            }
+          );
+          
+          // Create stream from buffer and pipe to Cloudinary
+          const bufferStream = new require('stream').Readable();
+          bufferStream.push(file.data);
+          bufferStream.push(null);
+          bufferStream.pipe(uploadStream);
         });
 
-        if (result?.secure_url) {
-          employee.profilePicture = result.secure_url;
-        } else {
-          console.error('Cloudinary upload failed - no URL returned');
-        }
+        employee.profilePicture = result.secure_url;
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
-        // Continue with other updates even if image upload fails
       }
     }
 

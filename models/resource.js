@@ -3,37 +3,22 @@ const mongoose = require('mongoose');
 const ResourceSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
-  },
-  type: {
-    type: String,
     required: true,
-    enum: ['laptop', 'mouse', 'keyboard', 'monitor', 'phone', 'other'],
-    default: 'other'
+    trim: true
   },
-  customType: {
-    type: String,
-    required: function() {
-      return this.type === 'other';
-    },
-    maxlength: 50
+  resourceType: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ResourceType',
+    required: true
   },
   description: {
     type: String,
-    default: null,
+    trim: true
   },
   images: [{
-    url: {
-      type: String,
-    },
-    public_id: {
-      type: String,
-    }
+    url: String,
+    public_id: String
   }],
-  serialNumber: {
-    type: String,
-    unique: true
-  },
   purchaseDate: {
     type: Date,
     default: Date.now
@@ -48,7 +33,18 @@ const ResourceSchema = new mongoose.Schema({
     default: false
   }
 }, {
-  timestamps: true
+  timestamps: true,
+  toObject: { virtuals: true },
+  toJSON: { virtuals: true }
+});
+
+// Virtual property to easily access the type name
+ResourceSchema.virtual('typeName', {
+  ref: 'ResourceType',
+  localField: 'resourceType',
+  foreignField: '_id',
+  justOne: true,
+  options: { select: 'name' }
 });
 
 const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);

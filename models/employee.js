@@ -22,11 +22,38 @@ const EmployeeSchema = new mongoose.Schema(
     },
     position: {
       type: String,
-      required: true,
+      enum: [
+        "Developer", 
+        "Senior Developer",
+        "Team Lead",
+        "HR Manager",
+        "Recruiter",
+        "Business Development Manager",
+        "Sales Manager",
+        "Project Manager",
+        "Admin",
+        "Accountant",
+        "Designer"
+      ],
+      default: "Developer",
+      required: true
     },
     department: {
       type: String,
-      required: true,
+      enum: [
+        "Software Development",
+        "Recruitment",
+        "Business Development",
+        "Sales",
+        "Marketing",
+        "Finance",
+        "Management",
+        "Administration",
+        "Design",
+        "Customer Support",
+      ],
+      default: "Software Development",
+      required: true
     },
     hireDate: {
       type: Date,

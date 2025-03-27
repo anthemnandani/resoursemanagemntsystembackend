@@ -1,31 +1,21 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const ResourceSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
-  },
-  type: {
-    type: String,
-    required: true,
-    enum: ['laptop', 'mouse', 'keyboard', 'monitor', 'phone', 'other'],
-    default: 'other'
-  },  
-  customType: {
-    type: String,
-    required: function() {
-      return this.type === 'other';
+const ResourceTypeSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      unique: true,
     },
-    maxlength: 30
+    description: {
+      type: String,
+    },
   },
-  description: {
-    type: String,
-    default: null,
-  }
-}, {
-  timestamps: true
-});
+  { timestamps: true }
+);
 
-const Resource = mongoose.models.Resource || mongoose.model('Resource', ResourceSchema);
+const ResourceType =
+  mongoose.models.ResourceType ||
+  mongoose.model("ResourceType", ResourceTypeSchema);
 
-module.exports = Resource;
+module.exports = ResourceType;

@@ -1,90 +1,76 @@
 const Resource = require('../models/resource');
 const Allocation = require('../models/allocation');
-const cloudinary  = require("../utils/cloudnery");
+const ResourceType = require('../models/resourseType');
 
 const createResource = async (req, res) => {
   try {
-    const { name, type, customType, description, purchaseDate, status, serialNumber } = req.body;
+    const { name, resourceTypeId, description, purchaseDate, status } = req.body;
 
-    // Validate required fields
-    if (!name || !type || (type === 'other' && !customType)) {
+    if (!name || !resourceTypeId) {
       return res.status(400).json({
         success: false,
-        error: 'Required fields are missing'
+        error: 'Name and resource type are required'
       });
     }
 
-    // Handle file upload to Cloudinary if an image is provided
-    let imageUploads = [];
-    if (req.files?.images) {
-      try {
-        imageUploads = await Promise.all(
-          req.files.images.map(file => {
-            return new Promise((resolve, reject) => {
-              const uploadStream = cloudinary.uploader.upload_stream(
-                {
-                  folder: "resources",
-                  resource_type: 'auto',
-                },
-                (error, result) => {
-                  if (error) reject(error);
-                  else resolve({
-                    url: result.secure_url, 
-                    public_id: result.public_id
-                  });
-                }
-              );
+    // Handle file upload to Cloudinary if images are avaliable
+    // let imageUploads = [];
+    // if (req.files?.images) {
+    //   try {
+    //     imageUploads = await Promise.all(
+    //       req.files.images.map(file => {
+    //         return new Promise((resolve, reject) => {
+    //           const uploadStream = cloudinary.uploader.upload_stream(
+    //             {
+    //               folder: "resources",
+    //               resource_type: 'auto',
+    //             },
+    //             (error, result) => {
+    //               if (error) reject(error);
+    //               else resolve({
+    //                 url: result.secure_url,
+    //                 public_id: result.public_id
+    //               });
+    //             }
+    //           );
 
-              const bufferStream = require('stream').Readable.from(file.data);
-              bufferStream.pipe(uploadStream);
-            });
-          })
-        );
-      } catch (uploadError) {
-        console.error('Image upload failed:', uploadError);
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload image'
-        });
-      }
-    }
+    //           const bufferStream = require('stream').Readable.from(file.data);
+    //           bufferStream.pipe(uploadStream);
+    //         });
+    //       })
+    //     );
+    //   } catch (uploadError) {
+    //     console.error('Image upload failed:', uploadError);
+    //     return res.status(500).json({
+    //       success: false,
+    //       error: 'Failed to upload images'
+    //     });
+    //   }
+    // }
 
     const resource = new Resource({
       name,
-      type,
-      customType: type === 'other' ? customType : undefined,
+      resourceType: resourceTypeId,
       description: description || undefined,
       purchaseDate: purchaseDate || new Date(),
       status: status || 'available',
-      serialNumber: serialNumber || undefined,
-      images: imageUploads,
+      // images: imageUploads,
     });
 
     await resource.save();
 
+    // Populate the resourceType name for the response
+    const createdResource = await Resource.findById(resource._id)
+      .populate('resourceType', 'name');
+
     res.status(201).json({
       success: true,
       message: "Resource created successfully",
-      data: resource
+      data: createdResource
     });
 
   } catch (error) {
     console.error('Resource creation error:', error);
-
-    if (error.code === 11000) {
-      return res.status(400).json({
-        success: false,
-        error: 'Resource with this serial number already exists'
-      });
-    }
-
-    if (error.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        error: 'Validation failed',
-        details: Object.values(error.errors).map(err => err.message)
-      });
-    }
 
     res.status(500).json({
       success: false,
@@ -93,78 +79,124 @@ const createResource = async (req, res) => {
   }
 };
 
-
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {
   try {
-    const resources = await Resource.find({ isDeleted: false });
-    res.json(resources);
+    const resources = await Resource.find({isDeleted:false})
+      .populate('resourceType', 'name') // Only populate the name field
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: resources
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
-
-// Get Single Resource
-const getResource = async (req, res) => {
-  try {
-    const resource = await Resource.findById(req.params.id);
-    if (!resource || resource.isDeleted) {
-      return res.status(404).json({ error: 'Resource not found' });
-    }
-    res.json(resource);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
   }
 };
 
 // Update Resource
 const updateResource = async (req, res) => {
   try {
-    const { name, type, customType, description, serialNumber, status } = req.body;
+    const { name, resourceTypeId, description, purchaseDate, status } = req.body;
     const resource = await Resource.findById(req.params.id);
     
     if (!resource || resource.isDeleted) {
-      return res.status(404).json({ error: 'Resource not found' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Resource not found' 
+      });
     }
 
-    // Validate customType when type is 'other'
-    if (type === 'other' && !customType) {
-      return res.status(400).json({ error: 'Custom type is required when selecting "other"' });
+    // Validate required fields
+    if (!name || !resourceTypeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Name and resource type are required'
+      });
     }
 
-    resource.name = name || resource.name;
-    resource.type = type || resource.type;
-    resource.description = description || resource.description;
-    resource.serialNumber = serialNumber || resource.serialNumber;
+    // Check if resource type exists
+    const typeExists = await ResourceType.findById(resourceTypeId);
+    if (!typeExists) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid resource type'
+      });
+    }
+
+    // Update resource fields
+    resource.name = name;
+    resource.resourceType = resourceTypeId;
+    resource.description = description || undefined;
+    resource.purchaseDate = purchaseDate || resource.purchaseDate;
     resource.status = status || resource.status;
-    
-    // Only update customType if type is 'other'
-    if (type === 'other') {
-      resource.customType = customType;
-    } else {
-      resource.customType = undefined;
-    }
 
     // Handle image updates if files are included
-    if (req.files?.images) {
-      const images = await Promise.all(
-        req.files.images.map((file) =>
-          cloudinary(file.buffer, "resources/images")
-        )
-      );
-      resource.images = [
-        ...resource.images,
-        ...images.map((img) => ({
-          url: img.secure_url,
-          public_id: img.public_id,
-        }))
-      ];
-    }
+    // if (req.files?.images) {
+    //   try {
+    //     const imageUploads = await Promise.all(
+    //       req.files.images.map(file => {
+    //         return new Promise((resolve, reject) => {
+    //           const uploadStream = cloudinary.uploader.upload_stream(
+    //             {
+    //               folder: "resources",
+    //               resource_type: 'auto',
+    //             },
+    //             (error, result) => {
+    //               if (error) reject(error);
+    //               else resolve({
+    //                 url: result.secure_url,
+    //                 public_id: result.public_id
+    //               });
+    //             }
+    //           );
+    //           const bufferStream = require('stream').Readable.from(file.data);
+    //           bufferStream.pipe(uploadStream);
+    //         });
+    //       })
+    //     );
+    //     resource.images = [...resource.images, ...imageUploads];
+    //   } catch (uploadError) {
+    //     console.error('Image upload failed:', uploadError);
+    //     return res.status(500).json({
+    //       success: false,
+    //       error: 'Failed to upload images'
+    //     });
+    //   }
+    // }
 
     await resource.save();
-    res.json(resource);
+
+    // Populate the resourceType name for the response
+    const updatedResource = await Resource.findById(resource._id)
+      .populate('resourceType', 'name');
+
+    res.json({
+      success: true,
+      message: "Resource updated successfully",
+      data: updatedResource
+    });
+
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Resource update error:', error);
+    
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: Object.values(error.errors).map(err => err.message)
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 
@@ -177,7 +209,6 @@ const deleteResource = async (req, res) => {
     }
 
     resource.isDeleted = true;
-    resource.status = 'maintenance';
     await resource.save();
     
     // Also deallocate if currently allocated
@@ -195,7 +226,6 @@ const deleteResource = async (req, res) => {
 module.exports = {
   createResource,
   getAllResources,
-  getResource,
   updateResource,
   deleteResource
 };
