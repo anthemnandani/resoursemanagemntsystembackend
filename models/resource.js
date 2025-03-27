@@ -25,16 +25,13 @@ const ResourceSchema = new mongoose.Schema({
   images: [{
     url: {
       type: String,
-      required: true
     },
     public_id: {
       type: String,
-      required: true
     }
   }],
   serialNumber: {
     type: String,
-    required: true,
     unique: true
   },
   purchaseDate: {

@@ -201,8 +201,3 @@ module.exports = {
   updateEmployee,
   deleteEmployee
 };
-
-
-
-
-
