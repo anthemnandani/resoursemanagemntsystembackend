@@ -14,8 +14,7 @@ const createResource = async (req, res) => {
         error: 'Required fields are missing'
       });
     }
-
-    // Process image uploads directly to Cloudinary without temp files
+    11
     let imageUploads = [];
     if (req.files?.images) {
       try {
