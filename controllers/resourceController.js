@@ -83,6 +83,26 @@ const createResource = async (req, res) => {
 const getAllResources = async (req, res) => {
   try {
     const resources = await Resource.find({isDeleted:false})
+      .populate('resourceType', 'name')
+      .sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: resources
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+};
+
+
+// Get All avaliable Resources
+const getAvaliableResources = async (req, res) => {
+  try {
+    const resources = await Resource.find({isDeleted:false, status:'available'})
       .populate('resourceType', 'name') // Only populate the name field
       .sort({ createdAt: -1 });
     
@@ -225,6 +245,7 @@ const deleteResource = async (req, res) => {
 
 module.exports = {
   createResource,
+  getAvaliableResources,
   getAllResources,
   updateResource,
   deleteResource

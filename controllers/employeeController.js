@@ -126,6 +126,15 @@ const getAllEmployees = async (req, res) => {
   }
 };
 
+const getAllActiveEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.find({status: 'active'});
+    res.json(employees);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // Get Single Employee
 const getEmployee = async (req, res) => {
   try {
@@ -230,6 +239,7 @@ const deleteEmployee = async (req, res) => {
 module.exports = {
   createEmployee,
   getAllEmployees,
+  getAllActiveEmployees,
   getEmployee,
   updateEmployee,
   deleteEmployee

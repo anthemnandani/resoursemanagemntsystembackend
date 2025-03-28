@@ -4,6 +4,7 @@ const upload = require("../utils/multer");
 const {
   createResource,
   getAllResources,
+  getAvaliableResources,
   updateResource,
   deleteResource,
 } = require("../controllers/resourceController");
@@ -14,6 +15,7 @@ router.post(
 );
 
 router.get('/', getAllResources);
+router.get('/getAvaliableResources', getAvaliableResources);
 router.put(
   '/updateresourse/:id',
   updateResource
