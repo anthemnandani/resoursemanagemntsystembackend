@@ -12,7 +12,17 @@ const createEmployee = async (req, res) => {
       try {
         const file = req.files.profilePicture;
         
-        // Convert buffer to stream and upload directly to Cloudinary
+        // Check file size (5MB limit example)
+        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+        if (file.size > MAX_FILE_SIZE) {
+          return res.status(400).json({
+            success: false,
+            error: 'File size too large',
+            message: 'Maximum allowed size is 5MB'
+          });
+        }
+    
+        // Convert buffer to stream and upload to Cloudinary
         const result = await new Promise((resolve, reject) => {
           const uploadStream = cloudinary.uploader.upload_stream(
             {
@@ -27,19 +37,24 @@ const createEmployee = async (req, res) => {
             }
           );
           
-          // Create stream from buffer and pipe to Cloudinary
           const bufferStream = new require('stream').Readable();
           bufferStream.push(file.data);
           bufferStream.push(null);
           bufferStream.pipe(uploadStream);
         });
-
+    
         profilePictureUrl = result.secure_url;
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
+        
+        let errorMessage = 'Failed to upload profile picture';
+        if (uploadError.message.includes('File size too large')) {
+          errorMessage = 'File size exceeds Cloudinary limits';
+        }
+        
         return res.status(500).json({
           success: false,
-          error: 'Failed to upload profile picture',
+          error: errorMessage,
           details: process.env.NODE_ENV === 'development' ? uploadError.message : undefined
         });
       }
