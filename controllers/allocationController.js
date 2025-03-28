@@ -13,12 +13,13 @@ const allocateResource = async (req, res) => {
       return res.status(404).json({ error: 'Employee not found or inactive' });
     }
 
-    // Check if resource exists and is available
+    // Check if resource exists
     const resource = await Resource.findOne({ _id: resourceId, isDeleted: false });
     if (!resource) {
       return res.status(404).json({ error: 'Resource not found or inactive' });
     }
-
+    
+    // Check if resource exists and is available
     if (resource.status !== 'available') {
       return res.status(400).json({ error: 'Resource is not available for allocation' });
     }
@@ -83,7 +84,7 @@ const getAllAllocations = async (req, res) => {
   try {
     const allocations = await Allocation.find()
       .populate('employee', 'name email position department')
-      .populate('resource', 'name type serialNumber');
+      .populate('resource', 'name type');
     
     res.json(allocations);
   } catch (error) {

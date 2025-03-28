@@ -6,7 +6,7 @@ const Allocation = require('../models/allocation');
 // Create Employee
 const createEmployee = async (req, res) => {
   try {
-    let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742973540/employee_profiles/gifynr23tzunvk3g9pzk.png';
+    let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png';
     
     if (req.files?.profilePicture) {
       try {
