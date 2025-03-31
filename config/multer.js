@@ -5,7 +5,7 @@ const storage = multer.memoryStorage();
 
 // File type validation
 const fileFilter = (req, file, cb) => {
-  const allowedFileTypes = /jpeg|jpg|png|gif|mp4|mov|avi|webm/;
+  const allowedFileTypes = /jpeg|jpg|png|gif|mov|avi|webm/;
   const extname = allowedFileTypes.test(
     file.originalname.toLowerCase()
   );

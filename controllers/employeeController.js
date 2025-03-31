@@ -1,82 +1,39 @@
-const cloudinary = require('../utils/cloudnery');
+const {uploadToCloudinary} = require('../utils/uploadToCloudinary');
 const Employee = require('../models/employee');
 // const Resource = require('../models/resource');
 const Allocation = require('../models/allocation');
 
-// Create Employee
 const createEmployee = async (req, res) => {
   try {
     let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png';
-    
+
     if (req.files?.profilePicture) {
       try {
-        const file = req.files.profilePicture;
-        
-        // Check file size (5MB limit example)
-        const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-        if (file.size > MAX_FILE_SIZE) {
-          return res.status(400).json({
-            success: false,
-            error: 'File size too large',
-            message: 'Maximum allowed size is 5MB'
-          });
-        }
-    
-        // Convert buffer to stream and upload to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: "employee_profiles",
-              width: 500,
-              height: 500,
-              crop: "fill"
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          
-          const bufferStream = new require('stream').Readable();
-          bufferStream.push(file.data);
-          bufferStream.push(null);
-          bufferStream.pipe(uploadStream);
-        });
-    
+        const file = req.files.profilePicture; 
+        const result = await uploadToCloudinary(file.data, "employee_profiles");
         profilePictureUrl = result.secure_url;
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
-        
-        let errorMessage = 'Failed to upload profile picture';
-        if (uploadError.message.includes('File size too large')) {
-          errorMessage = 'File size exceeds Cloudinary limits';
-        }
-        
         return res.status(500).json({
           success: false,
-          error: errorMessage,
-          details: process.env.NODE_ENV === 'development' ? uploadError.message : undefined
+          error: uploadError.message.includes('File size too large')
+            ? 'File size exceeds Cloudinary limits'
+            : 'Failed to upload profile picture'
         });
       }
     }
 
     const { name, email, position, department } = req.body;
-    
+
     // Validate required fields
     if (!name || !email || !position || !department) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'All fields are required' 
-      });
+      return res.status(400).json({ success: false, error: 'All fields are required' });
     }
 
     // Check for existing employee
     const existingEmployee = await Employee.findOne({ email });
     if (existingEmployee) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Employee with this email already exists' 
-      });
+      return res.status(400).json({ success: false, error: 'Employee with this email already exists' });
     }
 
     // Create new employee
@@ -99,7 +56,7 @@ const createEmployee = async (req, res) => {
 
   } catch (error) {
     console.error('Employee creation error:', error);
-    
+
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
@@ -107,7 +64,7 @@ const createEmployee = async (req, res) => {
         details: Object.values(error.errors).map(err => err.message)
       });
     }
-    
+
     res.status(500).json({
       success: false,
       error: 'Internal server error',

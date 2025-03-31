@@ -1,6 +1,10 @@
 const Resource = require('../models/resource');
 const Allocation = require('../models/allocation');
 const ResourceType = require('../models/resourseType');
+const { uploadToCloudinary } = require("../utils/uploadToCloudinary");
+const cloudinary = require('cloudinary').v2;
+
+// const uploadToCloudinary = require('../utils/uploadToCloudinary');
 
 const createResource = async (req, res) => {
   try {
@@ -13,40 +17,34 @@ const createResource = async (req, res) => {
       });
     }
 
-    // Handle file upload to Cloudinary if images are avaliable
-    // let imageUploads = [];
-    // if (req.files?.images) {
-    //   try {
-    //     imageUploads = await Promise.all(
-    //       req.files.images.map(file => {
-    //         return new Promise((resolve, reject) => {
-    //           const uploadStream = cloudinary.uploader.upload_stream(
-    //             {
-    //               folder: "resources",
-    //               resource_type: 'auto',
-    //             },
-    //             (error, result) => {
-    //               if (error) reject(error);
-    //               else resolve({
-    //                 url: result.secure_url,
-    //                 public_id: result.public_id
-    //               });
-    //             }
-    //           );
+    let imageUploads = [];
 
-    //           const bufferStream = require('stream').Readable.from(file.data);
-    //           bufferStream.pipe(uploadStream);
-    //         });
-    //       })
-    //     );
-    //   } catch (uploadError) {
-    //     console.error('Image upload failed:', uploadError);
-    //     return res.status(500).json({
-    //       success: false,
-    //       error: 'Failed to upload images'
-    //     });
-    //   }
-    // }
+    // Check if files exist
+    if (!req.files || req.files.length === 0) {
+      console.log('No files received for upload');
+    } else {
+      console.log(`Received ${req.files.length} files for upload`);
+
+      try {
+        // Upload images to Cloudinary
+        imageUploads = await Promise.allSettled(
+          req.files.map(file => uploadToCloudinary(file.buffer))
+        );
+
+        // Filter successful uploads
+        imageUploads = imageUploads
+          .filter(result => result.status === 'fulfilled')
+          .map(result => result.value);
+
+        console.log('Uploaded images:', imageUploads);
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to upload images'
+        });
+      }
+    }
 
     const resource = new Resource({
       name,
@@ -54,14 +52,15 @@ const createResource = async (req, res) => {
       description: description || undefined,
       purchaseDate: purchaseDate || new Date(),
       status: status || 'available',
-      // images: imageUploads,
+      images: imageUploads.length > 0 ? imageUploads : [],
     });
 
     await resource.save();
 
-    // Populate the resourceType name for the response
     const createdResource = await Resource.findById(resource._id)
       .populate('resourceType', 'name');
+
+    console.log('Saved resource:', createdResource);
 
     res.status(201).json({
       success: true,
@@ -70,14 +69,14 @@ const createResource = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Resource creation error:', error);
-
+    console.error('Resource creation error:', error.message);
     res.status(500).json({
       success: false,
       error: 'Internal server error'
     });
   }
 };
+
 
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {
