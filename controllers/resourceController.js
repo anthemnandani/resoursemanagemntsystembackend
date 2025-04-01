@@ -4,8 +4,6 @@ const ResourceType = require('../models/resourseType');
 const { uploadToCloudinary } = require("../utils/uploadToCloudinary");
 const cloudinary = require('cloudinary').v2;
 
-// const uploadToCloudinary = require('../utils/uploadToCloudinary');
-
 const createResource = async (req, res) => {
   try {
     const { name, resourceTypeId, description, purchaseDate, status } = req.body;
@@ -36,7 +34,7 @@ const createResource = async (req, res) => {
           .filter(result => result.status === 'fulfilled')
           .map(result => result.value);
 
-        console.log('Uploaded images:', imageUploads);
+        // console.log('Uploaded images:', imageUploads);
       } catch (uploadError) {
         console.error('Image upload failed:', uploadError);
         return res.status(500).json({
@@ -60,7 +58,7 @@ const createResource = async (req, res) => {
     const createdResource = await Resource.findById(resource._id)
       .populate('resourceType', 'name');
 
-    console.log('Saved resource:', createdResource);
+    // console.log('Saved resource:', createdResource);
 
     res.status(201).json({
       success: true,
@@ -70,6 +68,12 @@ const createResource = async (req, res) => {
 
   } catch (error) {
     console.error('Resource creation error:', error.message);
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        error: 'Resource with this name already exists'
+      });
+    }
     res.status(500).json({
       success: false,
       error: 'Internal server error'
