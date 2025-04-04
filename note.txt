@@ -6,7 +6,7 @@ employee table:
   "department": "IT",
   "contact": "+1234567890",
   "hireDate": "",
-  "status": "active/inactive",
+  "status": "Active/Inactive",
   "profilePicture": "",
   "isDeleted":"default false",
 
@@ -19,7 +19,7 @@ resourse table:
 "images": "we can upload multiple images",
 "serialNumber": "1/2/3",
 "purchaseDate":,
-"status": ['available', 'allocated', 'maintenance'],
+"status": ['Available', 'Allocated', 'maintenance'],
 "isDeleted": "default false",
 
 
@@ -27,9 +27,9 @@ Allocation table:
 "employee":"employee id"
 "resource": "resource id"
 "description": "",
-"allocatedDate":
+"AllocatedDate":
 "returnDate":
-"status": ['active', 'returned']
+"status": ['Active', 'Returned']
 
 
 
@@ -69,7 +69,7 @@ employee schema
     "email":"nks8543@gmail.com",
     "position":"MERN stack developer",
     "department":"IT",
-    "status":"inactive",
+    "status":"Inactive",
     "profilePicture":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png",
     "isDeleted":true,
     "hireDate":{"$date":{"$numberLong":"1742968278819"}},
@@ -90,7 +90,7 @@ employee schema
         {"url":"https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742893144/resources/gisb76jwgfzgltolsftv.jpg","public_id":"resources/gisb76jwgfzgltolsftv","_id":{"$oid":"67e27059c8f9b3fc70dfba12"}}
         ],
         "serialNumber":"9",
-        "status":"available","isDeleted":false,
+        "status":"Available","isDeleted":false,
         "purchaseDate":{"$date":{"$numberLong":"1742893145377"}},
         "createdAt":{"$date":{"$numberLong":"1742893145382"}},
         "updatedAt":{"$date":{"$numberLong":"1742893145382"}}

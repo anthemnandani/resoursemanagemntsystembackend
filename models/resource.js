@@ -16,6 +16,7 @@ const ResourceSchema = new mongoose.Schema(
     description: {
       type: String,
       trim: true,
+      maxlength: 500,
     },
     images: [
       {
@@ -39,8 +40,8 @@ const ResourceSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["available", "allocated", "maintenance"],
-      default: "available",
+      enum: ["Available", "Allocated", "maintenance"],
+      default: "Available",
     },
     isDeleted: {
       type: Boolean,

@@ -11,7 +11,7 @@ const AllocationSchema = new mongoose.Schema({
     ref: 'Resource',
     required: true
   },
-  allocatedDate: {
+  AllocatedDate: {
     type: Date,
     default: Date.now
   },
@@ -20,8 +20,8 @@ const AllocationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'returned'],
-    default: 'active'
+    enum: ['Active', 'Returned'],
+    default: 'Active'
   }
 }, {
   timestamps: true

@@ -5,15 +5,15 @@ const Resource = require("../models/resource");
 // Allocate Resource to Employee
 const allocateResource = async (req, res) => {
   try {
-    const { employeeId, resourceId, allocatedDate } = req.body;
+    const { employeeId, resourceId, AllocatedDate } = req.body;
 
-    // Check if employee exists and is active
+    // Check if employee exists and is Active
     const employee = await Employee.findOne({
       _id: employeeId,
       isDeleted: false,
     });
     if (!employee) {
-      return res.status(404).json({ error: "Employee not found or inactive" });
+      return res.status(404).json({ error: "Employee not found or Inactive" });
     }
 
     // Check if resource exists
@@ -22,35 +22,37 @@ const allocateResource = async (req, res) => {
       isDeleted: false,
     });
     if (!resource) {
-      return res.status(404).json({ error: "Resource not found or inactive" });
+      return res.status(404).json({ error: "Resource not found or Inactive" });
     }
 
-    // Check if resource is available
-    if (
-      resource.status !== "available" ||
-      resource.avaliableResourceCount === 0
-    ) {
-      return res
-        .status(400)
-        .json({ error: "No available resources for allocation" });
+    // Check if resource is Available
+    if (resource.status !== "Available" || resource.avaliableResourceCount === 0) {
+      return res.status(400).json({ error: "No Available resources for allocation" });
+    }
+
+    const existingAllocation = await Allocation.findOne({
+      employee: employeeId,
+      resource: resourceId,
+      returnDate: { $exists: false }, // Ensuring it's still allocated
+    });
+
+    if (existingAllocation) {
+      return res.status(400).json({ error: "Resource is already allocated to this employee" });
     }
 
     // Create new allocation
     const allocation = new Allocation({
       employee: employeeId,
       resource: resourceId,
-      allocatedDate: allocatedDate,
+      AllocatedDate: AllocatedDate,
     });
 
     // Update resource status and count
-    resource.avaliableResourceCount = Math.max(
-      resource.avaliableResourceCount - 1,
-      0
-    );
+    resource.avaliableResourceCount = Math.max(resource.avaliableResourceCount - 1, 0);
 
-    // If no resources left, mark as allocated
+    // If no resources left, mark as Allocated
     if (resource.avaliableResourceCount === 0) {
-      resource.status = "allocated";
+      resource.status = "Allocated";
     }
 
     await resource.save();
@@ -58,7 +60,7 @@ const allocateResource = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Resource allocated successfully",
+      message: "Resource Allocated successfully",
       allocation,
     });
   } catch (error) {
@@ -71,16 +73,16 @@ const returnResource = async (req, res) => {
     const { allocationId } = req.params;
     console.log("allocation id is: ", allocationId);
 
-    // Check if allocation exists and is active
+    // Check if allocation exists and is Active
     const allocation = await Allocation.findById(allocationId);
-    if (!allocation || allocation.status === "returned") {
+    if (!allocation || allocation.status === "Returned") {
       return res
         .status(404)
-        .json({ error: "Allocation not found or already returned" });
+        .json({ error: "Allocation not found or already Returned" });
     }
 
     // Update allocation status
-    allocation.status = "returned";
+    allocation.status = "Returned";
     allocation.returnDate = Date.now();
     await allocation.save();
 
@@ -92,9 +94,9 @@ const returnResource = async (req, res) => {
         resource.totalResourceCount
       );
 
-      // If at least one resource is available, update status
+      // If at least one resource is Available, update status
       if (resource.avaliableResourceCount > 0) {
-        resource.status = "available";
+        resource.status = "Available";
       }
 
       await resource.save();
@@ -102,7 +104,7 @@ const returnResource = async (req, res) => {
 
     res.json({
       success: true,
-      message: "Resource returned successfully",
+      message: "Resource Returned successfully",
       allocation,
     });
   } catch (error) {
@@ -140,7 +142,7 @@ const getEmployeeAllocations = async (req, res) => {
           model: "ResourceType", 
         },
       })
-      .sort({ allocatedDate: -1 });
+      .sort({ AllocatedDate: -1 });
 
     res.json({
       success: true,
@@ -152,10 +154,10 @@ const getEmployeeAllocations = async (req, res) => {
       totalAllocations: allocations.length,
       allocations: allocations.map((allocation) => ({
         resourceName: allocation.resource?.name || "N/A",
-        resourceType: allocation.resource?.resourceType?.name || "N/A", // Fetch actual resource type name
+        resourceType: allocation.resource?.resourceType?.name || "N/A",
         resourceId: allocation.resource?._id || null,
         description: allocation.resource?.description || "",
-        allocationDate: allocation.allocatedDate,
+        allocationDate: allocation.AllocatedDate,
         returnDate: allocation.returnDate,
         status: allocation.status,
       })),
@@ -167,10 +169,10 @@ const getEmployeeAllocations = async (req, res) => {
 };
 
 
-// Get Current Allocations (active)
+// Get Current Allocations (Active)
 const getCurrentAllocations = async (req, res) => {
   try {
-    const allocations = await Allocation.find({ status: "active" })
+    const allocations = await Allocation.find({ status: "Active" })
       .populate("employee", "name email position department")
       .populate("resource", "name type serialNumber");
 

@@ -4,9 +4,15 @@ const createResourceType = async (req, res) => {
   try {
     const { name, description } = req.body;
 
-    // Simple validation
-    if (!name) {
-      return res.status(400).json({ success: false, error: 'Name is required' });
+    if (!name || !description) {
+      return res.status(400).json({ success: false, error: 'Name and description is required' });
+    }
+
+    if (description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'Description cannot exceed 500 characters'
+      });
     }
 
     const resourceType = await ResourceType.create({
@@ -69,6 +75,13 @@ const updateResourceType = async (req, res) => {
       return res.status(404).json({
         success: false,
         error: 'Resource type not found'
+      });
+    }
+
+    if (description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'Description cannot exceed 500 characters'
       });
     }
 

@@ -43,7 +43,7 @@ const createEmployee = async (req, res) => {
       position,
       department,
       profilePicture: profilePictureUrl,
-      status: 'active'
+      status: 'Active'
     });
 
     await employee.save();
@@ -77,33 +77,24 @@ const createEmployee = async (req, res) => {
 const getAllEmployees = async (req, res) => {
   try {
     const employees = await Employee.find();
-    res.json(employees);
+    const employeesWithAllocations = await Promise.all(
+      employees.map(async (employee) => {
+        const allocationCount = await Allocation.countDocuments({ employee: employee._id });
+        return {
+          ...employee.toObject(),
+          allocatedResourceCount: allocationCount, // Add allocation count
+        };
+      })
+    );
+
+    res.json(employeesWithAllocations);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching employees:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 
-const getAllActiveEmployees = async (req, res) => {
-  try {
-    const employees = await Employee.find({status: 'active'});
-    res.json(employees);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
-// Get Single Employee
-const getEmployee = async (req, res) => {
-  try {
-    const employee = await Employee.findById(req.params.id);
-    if (!employee || employee.isDeleted) {
-      return res.status(404).json({ error: 'Employee not found' });
-    }
-    res.json(employee);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 // Update Employee
 const updateEmployee = async (req, res) => {
@@ -178,13 +169,13 @@ const deleteEmployee = async (req, res) => {
     }
 
     employee.isDeleted = true;
-    employee.status = 'inactive';
+    employee.status = 'Inactive';
     await employee.save();
     
     // Also deallocate any resources
     await Allocation.updateMany(
-      { employee: employee._id, status: 'active' },
-      { status: 'returned', returnDate: Date.now() }
+      { employee: employee._id, status: 'Active' },
+      { status: 'Returned', returnDate: Date.now() }
     );
 
     res.json({ message: 'Employee deactivated successfully' });
@@ -196,8 +187,6 @@ const deleteEmployee = async (req, res) => {
 module.exports = {
   createEmployee,
   getAllEmployees,
-  getAllActiveEmployees,
-  getEmployee,
   updateEmployee,
   deleteEmployee
 };

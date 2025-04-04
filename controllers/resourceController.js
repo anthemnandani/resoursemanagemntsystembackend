@@ -8,10 +8,17 @@ const createResource = async (req, res) => {
   try {
     const { name, resourceTypeId, description, purchaseDate, status, totalResourceCount, avaliableResourceCount } = req.body;
 
-    if (!name || !resourceTypeId) {
+    if (!name || !resourceTypeId || !description) {
       return res.status(400).json({
         success: false,
-        error: 'Name and resource type are required'
+        error: 'Name, description and resource type are required'
+      });
+    }
+
+    if (description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'Description cannot exceed 500 characters'
       });
     }
 
@@ -47,7 +54,7 @@ const createResource = async (req, res) => {
       resourceType: resourceTypeId,
       description: description || undefined,
       purchaseDate: purchaseDate || new Date(),
-      status: status || 'available',
+      status: status || 'Available',
       totalResourceCount: totalResourceCount || 1,
       avaliableResourceCount: avaliableResourceCount || 1,
       // images: imageUploads.length > 0 ? imageUploads : [],
@@ -103,7 +110,7 @@ const getAllResources = async (req, res) => {
 // Get All avaliable Resources
 const getAvaliableResources = async (req, res) => {
   try {
-    const resources = await Resource.find({isDeleted:false, status:'available'})
+    const resources = await Resource.find({isDeleted:false, status:'Available'})
       .populate('resourceType', 'name') 
       .sort({ createdAt: -1 });
     
@@ -142,10 +149,17 @@ const updateResource = async (req, res) => {
     }
 
     // Validate required fields
-    if (!name || !resourceTypeId) {
+    if (!name || !resourceTypeId || !description) {
       return res.status(400).json({
         success: false,
-        error: 'Name and resource type are required'
+        error: 'Name, description and resource type are required'
+      });
+    }
+
+    if (description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: 'Description cannot exceed 500 characters'
       });
     }
 
@@ -170,15 +184,15 @@ const updateResource = async (req, res) => {
       resource.totalResourceCount = totalResourceCount;
     }
 
-    // Update available resource count logic
+    // Update Available resource count logic
     if (avaliableResourceCount !== undefined) {
       resource.avaliableResourceCount = Math.min(avaliableResourceCount, resource.totalResourceCount);
     }
 
     // Handle resource allocation logic
-    if (status === "allocated") {
+    if (status === "Allocated") {
       resource.avaliableResourceCount = Math.max(resource.avaliableResourceCount - 1, 0);
-    } else if (status === "available") {
+    } else if (status === "Available") {
       resource.avaliableResourceCount = Math.min(resource.avaliableResourceCount + 1, resource.totalResourceCount);
     }
 
@@ -225,10 +239,10 @@ const deleteResource = async (req, res) => {
     resource.isDeleted = true;
     await resource.save();
     
-    // Also deallocate if currently allocated
+    // Also deallocate if currently Allocated
     await Allocation.updateMany(
-      { resource: resource._id, status: 'active' },
-      { status: 'returned', returnDate: Date.now() }
+      { resource: resource._id, status: 'Active' },
+      { status: 'Returned', returnDate: Date.now() }
     );
 
     res.json({ message: 'Resource deactivated successfully' });
