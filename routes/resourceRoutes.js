@@ -9,7 +9,7 @@ const {
   deleteResource,
 } = require("../controllers/resourceController");
 
-router.post('/createresourse', upload.array("media", 10), createResource);
+router.post('/createresourse', createResource);
 router.get('/', getAllResources);
 router.get('/getAvaliableResources', getAvaliableResources);
 router.put('/updateresourse/:id', updateResource);

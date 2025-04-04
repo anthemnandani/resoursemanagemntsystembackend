@@ -23,9 +23,15 @@ const ResourceSchema = new mongoose.Schema(
         public_id: String,
       },
     ],
-    resourseCount: {
+    totalResourceCount: {
       type: Number,
       default: 1,
+      min: 0,
+    },
+    avaliableResourceCount: {
+      type: Number,
+      default: 1,
+      min: 0,
     },
     purchaseDate: {
       type: Date,

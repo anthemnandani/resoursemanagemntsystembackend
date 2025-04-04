@@ -6,7 +6,7 @@ const cloudinary = require('cloudinary').v2;
 
 const createResource = async (req, res) => {
   try {
-    const { name, resourceTypeId, description, purchaseDate, status } = req.body;
+    const { name, resourceTypeId, description, purchaseDate, status, totalResourceCount, avaliableResourceCount } = req.body;
 
     if (!name || !resourceTypeId) {
       return res.status(400).json({
@@ -15,34 +15,32 @@ const createResource = async (req, res) => {
       });
     }
 
-    let imageUploads = [];
+    // let imageUploads = [];
 
-    // Check if files exist
-    if (!req.files || req.files.length === 0) {
-      console.log('No files received for upload');
-    } else {
-      console.log(`Received ${req.files.length} files for upload`);
+    // // Check if files exist
+    // if (!req.files || req.files.length === 0) {
+    //   console.log('No files received for upload');
+    // } else {
+    //   console.log(`Received ${req.files.length} files for upload`);
 
-      try {
-        // Upload images to Cloudinary
-        imageUploads = await Promise.allSettled(
-          req.files.map(file => uploadToCloudinary(file.buffer))
-        );
+    //   try {
+    //     // Upload images to Cloudinary
+    //     imageUploads = await Promise.allSettled(
+    //       req.files.map(file => uploadToCloudinary(file.buffer))
+    //     );
 
-        // Filter successful uploads
-        imageUploads = imageUploads
-          .filter(result => result.status === 'fulfilled')
-          .map(result => result.value);
-
-        // console.log('Uploaded images:', imageUploads);
-      } catch (uploadError) {
-        console.error('Image upload failed:', uploadError);
-        return res.status(500).json({
-          success: false,
-          error: 'Failed to upload images'
-        });
-      }
-    }
+    //     // Filter successful uploads
+    //     imageUploads = imageUploads
+    //       .filter(result => result.status === 'fulfilled')
+    //       .map(result => result.value);
+    //   } catch (uploadError) {
+    //     console.error('Image upload failed:', uploadError);
+    //     return res.status(500).json({
+    //       success: false,
+    //       error: 'Failed to upload images'
+    //     });
+    //   }
+    // }
 
     const resource = new Resource({
       name,
@@ -50,15 +48,15 @@ const createResource = async (req, res) => {
       description: description || undefined,
       purchaseDate: purchaseDate || new Date(),
       status: status || 'available',
-      images: imageUploads.length > 0 ? imageUploads : [],
+      totalResourceCount: totalResourceCount || 1,
+      avaliableResourceCount: avaliableResourceCount || 1,
+      // images: imageUploads.length > 0 ? imageUploads : [],
     });
 
     await resource.save();
 
     const createdResource = await Resource.findById(resource._id)
       .populate('resourceType', 'name');
-
-    // console.log('Saved resource:', createdResource);
 
     res.status(201).json({
       success: true,
@@ -106,7 +104,7 @@ const getAllResources = async (req, res) => {
 const getAvaliableResources = async (req, res) => {
   try {
     const resources = await Resource.find({isDeleted:false, status:'available'})
-      .populate('resourceType', 'name') // Only populate the name field
+      .populate('resourceType', 'name') 
       .sort({ createdAt: -1 });
     
     res.json({
@@ -124,9 +122,18 @@ const getAvaliableResources = async (req, res) => {
 // Update Resource
 const updateResource = async (req, res) => {
   try {
-    const { name, resourceTypeId, description, purchaseDate, status } = req.body;
+    const { 
+      name, 
+      resourceTypeId, 
+      description, 
+      purchaseDate, 
+      status, 
+      totalResourceCount, 
+      avaliableResourceCount 
+    } = req.body;
+
     const resource = await Resource.findById(req.params.id);
-    
+
     if (!resource || resource.isDeleted) {
       return res.status(404).json({ 
         success: false,
@@ -151,46 +158,29 @@ const updateResource = async (req, res) => {
       });
     }
 
-    // Update resource fields
+    // Update fields
     resource.name = name;
     resource.resourceType = resourceTypeId;
     resource.description = description || undefined;
     resource.purchaseDate = purchaseDate || resource.purchaseDate;
     resource.status = status || resource.status;
 
-    // Handle image updates if files are included
-    // if (req.files?.images) {
-    //   try {
-    //     const imageUploads = await Promise.all(
-    //       req.files.images.map(file => {
-    //         return new Promise((resolve, reject) => {
-    //           const uploadStream = cloudinary.uploader.upload_stream(
-    //             {
-    //               folder: "resources",
-    //               resource_type: 'auto',
-    //             },
-    //             (error, result) => {
-    //               if (error) reject(error);
-    //               else resolve({
-    //                 url: result.secure_url,
-    //                 public_id: result.public_id
-    //               });
-    //             }
-    //           );
-    //           const bufferStream = require('stream').Readable.from(file.data);
-    //           bufferStream.pipe(uploadStream);
-    //         });
-    //       })
-    //     );
-    //     resource.images = [...resource.images, ...imageUploads];
-    //   } catch (uploadError) {
-    //     console.error('Image upload failed:', uploadError);
-    //     return res.status(500).json({
-    //       success: false,
-    //       error: 'Failed to upload images'
-    //     });
-    //   }
-    // }
+    // Update totalResourceCount if provided
+    if (totalResourceCount !== undefined) {
+      resource.totalResourceCount = totalResourceCount;
+    }
+
+    // Update available resource count logic
+    if (avaliableResourceCount !== undefined) {
+      resource.avaliableResourceCount = Math.min(avaliableResourceCount, resource.totalResourceCount);
+    }
+
+    // Handle resource allocation logic
+    if (status === "allocated") {
+      resource.avaliableResourceCount = Math.max(resource.avaliableResourceCount - 1, 0);
+    } else if (status === "available") {
+      resource.avaliableResourceCount = Math.min(resource.avaliableResourceCount + 1, resource.totalResourceCount);
+    }
 
     await resource.save();
 
@@ -222,6 +212,7 @@ const updateResource = async (req, res) => {
     });
   }
 };
+
 
 // Soft Delete Resource
 const deleteResource = async (req, res) => {

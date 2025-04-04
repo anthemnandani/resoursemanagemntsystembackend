@@ -16,7 +16,7 @@ const AllocationSchema = new mongoose.Schema({
     default: Date.now
   },
   returnDate: {
-    type: Date
+    type: Date,
   },
   status: {
     type: String,
