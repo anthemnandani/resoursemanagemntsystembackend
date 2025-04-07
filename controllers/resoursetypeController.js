@@ -1,4 +1,5 @@
 const ResourceType = require('../models/resourseType');
+const Resource = require('../models/resource');
 
 const createResourceType = async (req, res) => {
   try {
@@ -31,23 +32,6 @@ const createResourceType = async (req, res) => {
         error: 'Resource type with this name already exists'
       });
     }
-    res.status(500).json({
-      success: false,
-      error: 'Server error'
-    });
-  }
-};
-
-const getResourceTypes = async (req, res) => {
-  try {
-    const resourceTypes = await ResourceType.find().sort({ name: 1 });
-    
-    res.json({
-      success: true,
-      count: resourceTypes.length,
-      data: resourceTypes
-    });
-  } catch (error) {
     res.status(500).json({
       success: false,
       error: 'Server error'
@@ -129,6 +113,46 @@ const deleteResourceType = async (req, res) => {
     });
   }
 };
+
+const getResourceTypes = async (req, res) => {
+  try {
+    const resourceTypesWithCounts = await ResourceType.aggregate([
+      {
+        $lookup: {
+          from: 'resources', // The name of the Resource collection
+          localField: '_id',
+          foreignField: 'resourceType',
+          as: 'resources'
+        }
+      },
+      {
+        $addFields: {
+          resourceCount: { $size: '$resources' }
+        }
+      },
+      {
+        $project: {
+          resources: 0 // Exclude the resources array from the output
+        }
+      },
+      {
+        $sort: { name: 1 } // Sort by name in ascending order
+      }
+    ]);
+
+    res.json({
+      success: true,
+      count: resourceTypesWithCounts.length,
+      data: resourceTypesWithCounts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+};
+
 
 module.exports = {
   createResourceType,
