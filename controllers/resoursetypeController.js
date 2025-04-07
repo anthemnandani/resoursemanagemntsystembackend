@@ -78,6 +78,10 @@ const updateResourceType = async (req, res) => {
       });
     }
 
+    if (!name || !description) {
+      return res.status(400).json({ success: false, error: 'Name and description is required' });
+    }
+
     if (description.length > 500) {
       return res.status(400).json({
         success: false,
