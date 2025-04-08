@@ -20,10 +20,22 @@ const ResourceSchema = new mongoose.Schema(
     },
     images: [
       {
-        url: String,
-        public_id: String,
+        url: {
+          type: String,
+          required: true,
+          validate: {
+            validator: function (url) {
+              return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|jfif|mp4|mov|avi|webm))$/.test(url);
+            },
+            message: (props) => `${props.value} is not a valid media URL!`,
+          },
+        },
+        public_id: {
+          type: String,
+          required: true,
+        },
       },
-    ],
+    ], 
     totalResourceCount: {
       type: Number,
       default: 1,

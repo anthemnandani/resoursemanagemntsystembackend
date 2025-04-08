@@ -1,6 +1,5 @@
 const express = require('express');
-const router = express.Router();
-const upload = require("../config/multer");
+const upload = require("../config/multer"); 
 const {
   createResource,
   getAllResources,
@@ -9,7 +8,8 @@ const {
   deleteResource,
 } = require("../controllers/resourceController");
 
-router.post('/createresourse', createResource);
+const router = express.Router();
+router.post('/createresourse', upload.array("images", 10), createResource);
 router.get('/', getAllResources);
 router.get('/getAvaliableResources', getAvaliableResources);
 router.put('/updateresourse/:id', updateResource);

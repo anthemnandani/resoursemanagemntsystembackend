@@ -2,90 +2,89 @@ const Resource = require('../models/resource');
 const Allocation = require('../models/allocation');
 const ResourceType = require('../models/resourseType');
 const { uploadToCloudinary } = require("../utils/uploadToCloudinary");
-const cloudinary = require('cloudinary').v2;
 
 const createResource = async (req, res) => {
   try {
-    const { name, resourceTypeId, description, purchaseDate, status, totalResourceCount, avaliableResourceCount } = req.body;
+    const {
+      name,
+      resourceTypeId,
+      description,
+      purchaseDate,
+      status,
+      totalResourceCount,
+      avaliableResourceCount,
+    } = req.body;
 
     if (!name || !resourceTypeId || !description) {
       return res.status(400).json({
         success: false,
-        error: 'Name, description and resource type are required'
+        error: "Name, description and resource type are required",
       });
     }
 
     if (description.length > 500) {
       return res.status(400).json({
         success: false,
-        error: 'Description cannot exceed 500 characters'
+        error: "Description cannot exceed 500 characters",
       });
     }
 
-    // let imageUploads = [];
+    // Check if images are present
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "At least one image is required",
+      });
+    }
 
-    // // Check if files exist
-    // if (!req.files || req.files.length === 0) {
-    //   console.log('No files received for upload');
-    // } else {
-    //   console.log(`Received ${req.files.length} files for upload`);
+    // Upload images to Cloudinary
+    const images = await Promise.all(
+      req.files.map((file) => uploadToCloudinary(file.buffer, "resources/images"))
+    );
 
-    //   try {
-    //     // Upload images to Cloudinary
-    //     imageUploads = await Promise.allSettled(
-    //       req.files.map(file => uploadToCloudinary(file.buffer))
-    //     );
-
-    //     // Filter successful uploads
-    //     imageUploads = imageUploads
-    //       .filter(result => result.status === 'fulfilled')
-    //       .map(result => result.value);
-    //   } catch (uploadError) {
-    //     console.error('Image upload failed:', uploadError);
-    //     return res.status(500).json({
-    //       success: false,
-    //       error: 'Failed to upload images'
-    //     });
-    //   }
-    // }
+    // Map to include secure_url and public_id
+    const imageUrls = images.map((img) => ({
+      url: img.secure_url,
+      public_id: img.public_id,
+    }));
 
     const resource = new Resource({
       name,
       resourceType: resourceTypeId,
-      description: description || undefined,
+      description,
       purchaseDate: purchaseDate || new Date(),
-      status: status || 'Available',
+      status: status || "Available",
       totalResourceCount: totalResourceCount || 1,
       avaliableResourceCount: avaliableResourceCount || 1,
-      // images: imageUploads.length > 0 ? imageUploads : [],
+      images: imageUrls, // Must exist in schema
     });
 
     await resource.save();
 
-    const createdResource = await Resource.findById(resource._id)
-      .populate('resourceType', 'name');
+    const createdResource = await Resource.findById(resource._id).populate(
+      "resourceType",
+      "name"
+    );
 
     res.status(201).json({
       success: true,
       message: "Resource created successfully",
-      data: createdResource
+      data: createdResource,
     });
-
   } catch (error) {
-    console.error('Resource creation error:', error.message);
+    console.error("Resource creation error:", error.message);
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
-        error: 'Resource with this name already exists'
+        error: "Resource with this name already exists",
       });
     }
     res.status(500).json({
       success: false,
-      error: 'Internal server error'
+      error: "Internal server error",
     });
   }
 };
-
 
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {

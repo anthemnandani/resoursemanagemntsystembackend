@@ -1,11 +1,8 @@
-const multer = require("multer");
+const multer = require('multer');
 
-// Configure Multer for memory storage
 const storage = multer.memoryStorage();
-
-// File type validation
 const fileFilter = (req, file, cb) => {
-  const allowedFileTypes = /jpeg|jpg|png|gif|mov|avi|webm/;
+  const allowedFileTypes = /jpeg|jpg|png|gif|avi|jfif|webm/;
   const extname = allowedFileTypes.test(
     file.originalname.toLowerCase()
   );
@@ -14,15 +11,14 @@ const fileFilter = (req, file, cb) => {
   if (extname && mimetype) {
     cb(null, true);
   } else {
-    cb(new Error("Only images and videos are allowed."));
+    cb(new Error("Only images are allowed."));
   }
 };
 
-// Multer instance
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 50 * 1024 * 1024 }, // Limit file size to 50 MB
+  limits: { fileSize: 50 * 1024 * 1024 },
 });
 
 module.exports = upload;

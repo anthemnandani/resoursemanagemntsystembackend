@@ -65,9 +65,20 @@ const EmployeeSchema = new mongoose.Schema(
       default: "Active",
     },
     profilePicture: {
-      type: String,
-      default:
-        "https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png",
+      url: {
+        type: String,
+        default:
+          "https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png",
+        validate: {
+          validator: function (url) {
+            return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|jfif|avi|webm))$/.test(url);
+          },
+          message: (props) => `${props.value} is not a valid media URL!`,
+        },
+      },
+      public_id: {
+        type: String,
+      },
     },
     isDeleted: {
       type: Boolean,

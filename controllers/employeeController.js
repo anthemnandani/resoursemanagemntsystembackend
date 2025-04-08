@@ -5,13 +5,18 @@ const Allocation = require('../models/allocation');
 
 const createEmployee = async (req, res) => {
   try {
-    let profilePictureUrl = 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png';
+    let profilePicture = {
+      url: 'https://res.cloudinary.com/dmyq2ymj9/image/upload/v1742888485/4288270_nuia5s.png',
+      public_id: ''
+    };
 
-    if (req.files?.profilePicture) {
+    if (req.file) {
       try {
-        const file = req.files.profilePicture; 
-        const result = await uploadToCloudinary(file.data, "employee_profiles");
-        profilePictureUrl = result.secure_url;
+        const result = await uploadToCloudinary(req.file.buffer, "employee/profilePicture");
+        profilePicture = {
+          url: result.secure_url,
+          public_id: result.public_id
+        };
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
         return res.status(500).json({
@@ -25,24 +30,21 @@ const createEmployee = async (req, res) => {
 
     const { name, email, position, department } = req.body;
 
-    // Validate required fields
     if (!name || !email || !position || !department) {
       return res.status(400).json({ success: false, error: 'All fields are required' });
     }
 
-    // Check for existing employee
     const existingEmployee = await Employee.findOne({ email });
     if (existingEmployee) {
       return res.status(400).json({ success: false, error: 'Employee with this email already exists' });
     }
 
-    // Create new employee
     const employee = new Employee({
       name,
       email,
       position,
       department,
-      profilePicture: profilePictureUrl,
+      profilePicture,
       status: 'Active'
     });
 
@@ -82,7 +84,7 @@ const getAllEmployees = async (req, res) => {
         const allocationCount = await Allocation.countDocuments({ employee: employee._id });
         return {
           ...employee.toObject(),
-          allocatedResourceCount: allocationCount, // Add allocation count
+          allocatedResourceCount: allocationCount,
         };
       })
     );
@@ -94,8 +96,6 @@ const getAllEmployees = async (req, res) => {
   }
 };
 
-
-
 // Update Employee
 const updateEmployee = async (req, res) => {
   try {
@@ -106,46 +106,36 @@ const updateEmployee = async (req, res) => {
       return res.status(404).json({ error: 'Employee not found' });
     }
 
-    // Handle file upload if a new profile picture was provided
-    if (req.files?.profilePicture) {
+    // Handle new profile picture upload
+    if (req.file) {
       try {
-        const file = req.files.profilePicture;
-        
-        // Convert buffer to stream and upload directly to Cloudinary
-        const result = await new Promise((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              folder: "employee_profiles",
-              width: 500,
-              height: 500,
-              crop: "fill"
-            },
-            (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            }
-          );
-          
-          // Create stream from buffer and pipe to Cloudinary
-          const bufferStream = new require('stream').Readable();
-          bufferStream.push(file.data);
-          bufferStream.push(null);
-          bufferStream.pipe(uploadStream);
-        });
+        const result = await uploadToCloudinary(req.file.buffer, "employee/profilePicture");
 
-        employee.profilePicture = result.secure_url;
+        // Optionally: delete the old image from Cloudinary using employee.profilePicture.public_id
+
+        employee.profilePicture = {
+          url: result.secure_url,
+          public_id: result.public_id
+        };
       } catch (uploadError) {
         console.error('Profile picture upload failed:', uploadError);
+        return res.status(500).json({
+          success: false,
+          error: uploadError.message.includes('File size too large')
+            ? 'File size exceeds Cloudinary limits'
+            : 'Failed to upload new profile picture'
+        });
       }
     }
 
+    // Update basic fields
     employee.name = name || employee.name;
     employee.position = position || employee.position;
     employee.department = department || employee.department;
     employee.status = status || employee.status;
 
     await employee.save();
-    
+
     res.json({
       success: true,
       message: "Employee updated successfully",
@@ -159,6 +149,7 @@ const updateEmployee = async (req, res) => {
     });
   }
 };
+
 
 // Soft Delete Employee
 const deleteEmployee = async (req, res) => {
