@@ -4,6 +4,7 @@ const connectToDatabase = require('./config/db');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5000;
+const dashboardRoutes = require("./routes/dashboard");
 // const fileUpload = require('express-fileupload');
 
 const employeeRoutes = require('./routes/employeeRoutes');
@@ -46,6 +47,7 @@ app.use('/api/resources', resourceRoutes);
 app.use('/api/resourcestype', resourceTypeRoutes);
 app.use('/api/allocations', allocationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
