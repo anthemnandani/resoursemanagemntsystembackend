@@ -35,7 +35,19 @@ const ResourceSchema = new mongoose.Schema(
           required: true,
         },
       },
-    ], 
+    ],
+    documents: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        public_id: {
+          type: String,
+          required: true,
+        },
+      },
+    ],      
     totalResourceCount: {
       type: Number,
       default: 1,
@@ -47,6 +59,10 @@ const ResourceSchema = new mongoose.Schema(
       min: 0,
     },
     purchaseDate: {
+      type: Date,
+      default: Date.now,
+    },
+    warrantyExpiryDate: {
       type: Date,
       default: Date.now,
     },
