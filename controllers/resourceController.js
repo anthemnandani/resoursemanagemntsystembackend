@@ -32,7 +32,6 @@ const createResource = async (req, res) => {
       });
     }
 
-    // Ensure at least one image is uploaded
     if (!req.files || !req.files.images || req.files.images.length === 0) {
       return res.status(400).json({
         success: false,
