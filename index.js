@@ -13,17 +13,30 @@ const resourceTypeRoutes = require('./routes/resourseTypeRoutes');
 const allocationRoutes = require('./routes/allocationRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 
+const allowedOrigins = [
+  "https://resoursemanagemntsystem.vercel.app",
+  "http://localhost:5173"
+];
+
 const corsOptions = {
-  origin: "https://resoursemanagemntsystem.vercel.app", 
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   credentials: true,
 };
 app.use(cors(corsOptions));
-
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: false })); 
 
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://resoursemanagemntsystem.vercel.app");
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
   res.header("Access-Control-Allow-Credentials", "true");
   res.header(
     "Access-Control-Allow-Headers",
