@@ -16,13 +16,15 @@ const createResource = async (req, res) => {
       avaliableResourceCount,
     } = req.body;
 
+    // Validate required fields
     if (!name || !resourceTypeId || !description) {
       return res.status(400).json({
         success: false,
-        error: "Name, description and resource type are required",
+        error: "Name, description, and resource type are required",
       });
     }
 
+    // Description limit
     if (description.length > 500) {
       return res.status(400).json({
         success: false,
@@ -30,7 +32,7 @@ const createResource = async (req, res) => {
       });
     }
 
-    // Ensure images are uploaded
+    // Ensure at least one image is uploaded
     if (!req.files || !req.files.images || req.files.images.length === 0) {
       return res.status(400).json({
         success: false,
@@ -38,7 +40,7 @@ const createResource = async (req, res) => {
       });
     }
 
-    // Upload images to Cloudinary
+    // Upload images to Cloudinary (as images)
     const uploadedImages = await Promise.all(
       req.files.images.map((file) =>
         uploadToCloudinary(file.buffer, "resources/images", "image")
@@ -50,22 +52,23 @@ const createResource = async (req, res) => {
       public_id: img.public_id,
     }));
 
-    // Upload documents if provided
+    // Upload documents to Cloudinary (as raw files)
     let docUrls = [];
     if (req.files.documents && req.files.documents.length > 0) {
       const uploadedDocs = await Promise.all(
-        req.files.documents.map((file) =>
-          uploadToCloudinary(file.buffer, "resources/documents", "raw")
+        req.files.documents.map(async(file) =>
+        await uploadToCloudinary(file.buffer, "resources/documents", "raw", file.originalname)
         )
       );
-
+      
+    
       docUrls = uploadedDocs.map((doc) => ({
         url: doc.secure_url,
         public_id: doc.public_id,
       }));
     }
 
-    // Create resource
+    // Create new resource
     const resource = new Resource({
       name,
       resourceType: resourceTypeId,
@@ -81,6 +84,7 @@ const createResource = async (req, res) => {
 
     await resource.save();
 
+    // Populate and return created resource
     const createdResource = await Resource.findById(resource._id).populate(
       "resourceType",
       "name"
@@ -93,12 +97,14 @@ const createResource = async (req, res) => {
     });
   } catch (error) {
     console.error("Resource creation error:", error.message);
+
     if (error.code === 11000) {
       return res.status(400).json({
         success: false,
         error: "Resource with this name already exists",
       });
     }
+
     res.status(500).json({
       success: false,
       error: "Internal server error",
