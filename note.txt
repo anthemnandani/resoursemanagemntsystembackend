@@ -35,17 +35,17 @@ Allocation table:
 
 
 
-  create employee route(method:post) = http://localhost:5000/api/employees/createemployee
-  get single employee if not deleted(method:get) = http://localhost:5000/api/employees/67e395d663398fcbe7d7a936
-  get single all employee if not deleted(method:get) = http://localhost:5000/api/employees
-  soft delete employee route route(method:delete) = http://localhost:5000/api/employees/67e395d663398fcbe7d7a936
+  create employee route(method:post) = https://resoursemanagemntsystem-bksn.vercel.app/api/employees/createemployee
+  get single employee if not deleted(method:get) = https://resoursemanagemntsystem-bksn.vercel.app/api/employees/67e395d663398fcbe7d7a936
+  get single all employee if not deleted(method:get) = https://resoursemanagemntsystem-bksn.vercel.app/api/employees
+  soft delete employee route route(method:delete) = https://resoursemanagemntsystem-bksn.vercel.app/api/employees/67e395d663398fcbe7d7a936
   
-  create resourse route = http://localhost:5000/api/resources/createresourse
-  update resourse route(method:put) = http://localhost:5000/api/resources/67e39f153df598136a8b7917
-  get all resourse route = http://localhost:5000/api/resources
+  create resourse route = https://resoursemanagemntsystem-bksn.vercel.app/api/resources/createresourse
+  update resourse route(method:put) = https://resoursemanagemntsystem-bksn.vercel.app/api/resources/67e39f153df598136a8b7917
+  get all resourse route = https://resoursemanagemntsystem-bksn.vercel.app/api/resources
 
-  admin login route = http://localhost:5000/api/admin/login
-  admin register route = http://localhost:5000/api/admin/register
+  admin login route = https://resoursemanagemntsystem-bksn.vercel.app/api/admin/login
+  admin register route = https://resoursemanagemntsystem-bksn.vercel.app/api/admin/register
 
 
 
