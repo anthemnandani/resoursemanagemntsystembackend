@@ -51,7 +51,7 @@ const createResource = async (req, res) => {
       public_id: img.public_id,
     }));
 
-    // Upload documents to Cloudinary (as raw files)
+    // Upload documents to Cloudinary
     let docUrls = [];
     if (req.files.documents && req.files.documents.length > 0) {
       const uploadedDocs = await Promise.all(
@@ -95,7 +95,7 @@ const createResource = async (req, res) => {
       data: createdResource,
     });
   } catch (error) {
-    console.error("Resource creation error:", error.message);
+    console.log("Resource creation error:", error.message);
 
     if (error.code === 11000) {
       return res.status(400).json({
@@ -110,6 +110,146 @@ const createResource = async (req, res) => {
     });
   }
 };
+
+// Update Resource
+const updateResource = async (req, res) => {
+  try {
+    const {
+      name,
+      resourceTypeId,
+      description,
+      purchaseDate,
+      warrantyExpiryDate,
+      status,
+      totalResourceCount,
+      avaliableResourceCount,
+    } = req.body;
+
+    const resource = await Resource.findById(req.params.id);
+
+    if (!resource || resource.isDeleted) {
+      return res.status(404).json({
+        success: false,
+        error: "Resource not found",
+      });
+    }
+
+    if (!name || !resourceTypeId || !description) {
+      return res.status(400).json({
+        success: false,
+        error: "Name, description and resource type are required",
+      });
+    }
+
+    if (description.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: "Description cannot exceed 500 characters",
+      });
+    }
+
+    const typeExists = await ResourceType.findById(resourceTypeId);
+    if (!typeExists) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid resource type",
+      });
+    }
+
+    // ====== Handle Image Uploads (optional additional images) ======
+    if (req.files?.images?.length > 0) {
+      const uploadedImages = await Promise.all(
+        req.files.images.map((file) =>
+          uploadToCloudinary(file.buffer, "resources/images", "image")
+        )
+      );
+
+      const imageUrls = uploadedImages.map((img) => ({
+        url: img.secure_url,
+        public_id: img.public_id,
+      }));
+
+      // Append new images to existing ones
+      resource.images = [...resource.images, ...imageUrls];
+    }
+
+    // ====== Handle Document Uploads (optional additional documents) ======
+    if (req.files?.documents?.length > 0) {
+      const uploadedDocs = await Promise.all(
+        req.files.documents.map((file) =>
+          uploadToCloudinary(file.buffer, "resources/documents", "raw", file.originalname)
+        )
+      );
+
+      const docUrls = uploadedDocs.map((doc) => ({
+        url: doc.secure_url,
+        public_id: doc.public_id,
+      }));
+
+      resource.documents = [...resource.documents, ...docUrls];
+    }
+
+    // ====== Update other fields ======
+    resource.name = name;
+    resource.resourceType = resourceTypeId;
+    resource.description = description;
+    resource.purchaseDate = purchaseDate || resource.purchaseDate;
+    resource.warrantyExpiryDate = warrantyExpiryDate || resource.warrantyExpiryDate;
+    resource.status = status || resource.status;
+
+    if (totalResourceCount !== undefined) {
+      resource.totalResourceCount = totalResourceCount;
+    }
+
+    if (avaliableResourceCount !== undefined) {
+      resource.avaliableResourceCount = Math.min(
+        avaliableResourceCount,
+        resource.totalResourceCount
+      );
+    }
+
+    // Allocation status logic
+    if (status === "Allocated") {
+      resource.avaliableResourceCount = Math.max(resource.avaliableResourceCount - 1, 0);
+    } else if (status === "Available") {
+      resource.avaliableResourceCount = Math.min(
+        resource.avaliableResourceCount + 1,
+        resource.totalResourceCount
+      );
+    }
+
+    await resource.save();
+
+    const updatedResource = await Resource.findById(resource._id).populate(
+      "resourceType",
+      "name"
+    );
+
+    res.json({
+      success: true,
+      message: "Resource updated successfully",
+      data: updatedResource,
+    });
+
+  } catch (error) {
+    console.error("Resource update error:", error);
+
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        success: false,
+        error: "Validation failed",
+        details: Object.values(error.errors).map((err) => err.message),
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+      details: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  }
+};
+
 
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {
@@ -148,122 +288,6 @@ const getAvaliableResources = async (req, res) => {
     res.status(500).json({
       success: false,
       error: "Server error",
-    });
-  }
-};
-
-// Update Resource
-const updateResource = async (req, res) => {
-  try {
-    const {
-      name,
-      resourceTypeId,
-      description,
-      purchaseDate,
-      warrantyExpiryDate,
-      status,
-      totalResourceCount,
-      avaliableResourceCount,
-    } = req.body;
-
-    console.log("body: ", req.body);
-
-    const resource = await Resource.findById(req.params.id);
-
-    if (!resource || resource.isDeleted) {
-      return res.status(404).json({
-        success: false,
-        error: "Resource not found",
-      });
-    }
-
-    if (!name || !resourceTypeId || !description) {
-      return res.status(400).json({
-        success: false,
-        error: "Name, description and resource type are required",
-      });
-    }
-
-    if (description.length > 500) {
-      return res.status(400).json({
-        success: false,
-        error: "Description cannot exceed 500 characters",
-      });
-    }
-
-    // Check if resource type exists
-    const typeExists = await ResourceType.findById(resourceTypeId);
-    if (!typeExists) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid resource type",
-      });
-    }
-
-    // Update fields
-    resource.name = name;
-    resource.resourceType = resourceTypeId;
-    resource.description = description || undefined;
-    resource.purchaseDate = purchaseDate || resource.purchaseDate;
-    resource.warrantyExpiryDate =
-      warrantyExpiryDate || resource.warrantyExpiryDate;
-    resource.status = status || resource.status;
-
-    // Update totalResourceCount if provided
-    if (totalResourceCount !== undefined) {
-      resource.totalResourceCount = totalResourceCount;
-    }
-
-    // Update Available resource count logic
-    if (avaliableResourceCount !== undefined) {
-      resource.avaliableResourceCount = Math.min(
-        avaliableResourceCount,
-        resource.totalResourceCount
-      );
-    }
-
-    // Handle resource allocation logic
-    if (status === "Allocated") {
-      resource.avaliableResourceCount = Math.max(
-        resource.avaliableResourceCount - 1,
-        0
-      );
-    } else if (status === "Available") {
-      resource.avaliableResourceCount = Math.min(
-        resource.avaliableResourceCount + 1,
-        resource.totalResourceCount
-      );
-    }
-
-    await resource.save();
-
-    // Populate the resourceType name for the response
-    const updatedResource = await Resource.findById(resource._id).populate(
-      "resourceType",
-      "name"
-    );
-
-    res.json({
-      success: true,
-      message: "Resource updated successfully",
-      data: updatedResource,
-    });
-  } catch (error) {
-    console.error("Resource update error:", error);
-
-    if (error.name === "ValidationError") {
-      return res.status(400).json({
-        success: false,
-        error: "Validation failed",
-        details: Object.values(error.errors).map((err) => err.message),
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-      details:
-        process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   }
 };

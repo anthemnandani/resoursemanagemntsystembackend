@@ -12,8 +12,8 @@ const router = express.Router();
 router.post(
   "/createresourse",
   upload.fields([
-    { name: "images", maxCount: 5 },
-    { name: "documents", maxCount: 5 },
+    { name: "images", maxCount: 10 },
+    { name: "documents", maxCount: 3 },
   ]),
   createResource
 );
@@ -22,8 +22,8 @@ router.get("/getAvaliableResources", getAvaliableResources);
 router.put(
   "/updateresourse/:id",
   upload.fields([
-    { name: "images", maxCount: 5 },
-    { name: "documents", maxCount: 5 },
+    { name: "images", maxCount: 10 },
+    { name: "documents", maxCount: 3 },
   ]),
   updateResource
 );

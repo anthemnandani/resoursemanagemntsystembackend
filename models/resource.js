@@ -25,7 +25,7 @@ const ResourceSchema = new mongoose.Schema(
           required: true,
           validate: {
             validator: function (url) {
-              return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|jfif|mp4|mov|avi|webm))$/.test(url);
+              return /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|jfif|webp|mp4|mov|avi|webm))$/.test(url);
             },
             message: (props) => `${props.value} is not a valid media URL!`,
           },
