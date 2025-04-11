@@ -42,10 +42,16 @@ const login = async (req, res) => {
 
   try {
     const admin = await Admin.findOne({ email });
-    if (!admin) return res.status(400).json({ success: false, error: 'Employee with this email not exists' });
+    if (!admin)
+      return res
+        .status(400)
+        .json({ success: false, error: "Employee with this email not exists" });
 
     const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) return res.status(400).json({ success: false, error: 'Incorrect password' });
+    if (!isMatch)
+      return res
+        .status(400)
+        .json({ success: false, error: "Incorrect password" });
 
     const token = jwt.sign({ adminId: admin._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
@@ -75,19 +81,17 @@ const forgetPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const token = jwt.sign(
-      { adminId: user._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "10m" }
-    );
+    const token = jwt.sign({ adminId: user._id }, process.env.JWT_SECRET, {
+      expiresIn: "10m",
+    });
 
-    console.log("env: ",process.env.EMAIL, process.env.PASSWORD_APP_EMAIL );
+    console.log("env: ", process.env.EMAIL, process.env.PASSWORD_APP_EMAIL);
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      service: "gmail", // Use your email service provider
       auth: {
-        user: process.env.EMAIL,
-        pass: process.env.PASSWORD_APP_EMAIL,
+        user: "neeraj@antheminfotech.com", // Your email address
+        pass: "pcwgfixsrnvingtv", // Your email password or app-specific password
       },
     });
 
@@ -121,10 +125,7 @@ const forgetPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   try {
-    const decodedToken = jwt.verify(
-      req.params.token,
-      process.env.JWT_SECRET
-    );
+    const decodedToken = jwt.verify(req.params.token, process.env.JWT_SECRET);
 
     if (!decodedToken) {
       return res.status(401).json({ message: "Invalid or expired token" });
@@ -149,5 +150,8 @@ const resetPassword = async (req, res) => {
 };
 
 module.exports = {
-  login, register, resetPassword, forgetPassword
+  login,
+  register,
+  resetPassword,
+  forgetPassword,
 };
