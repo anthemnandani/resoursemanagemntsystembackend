@@ -136,17 +136,19 @@ const resetPassword = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-     // Password validation
-     const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
-     if (!passwordRegex.test(newPassword)) {
-       return res.status(400).json({
-         message:
-           "Password must contain at least 1 uppercase letter, 1 number, and 1 special character, and be at least 6 characters long",
-       });
-     }
+    const { newPassword } = req.body; // ✅ This is how you extract newPassword
+
+    // Password validation
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/;
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        message:
+          "Password must contain at least 1 uppercase letter, 1 number, and 1 special character, and be at least 6 characters long",
+      });
+    }
 
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.newPassword, salt);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
 
     user.password = hashedPassword;
     await user.save();
@@ -157,6 +159,7 @@ const resetPassword = async (req, res) => {
     res.status(500).json({ message: err.message || "Something went wrong" });
   }
 };
+
 
 module.exports = {
   login,
