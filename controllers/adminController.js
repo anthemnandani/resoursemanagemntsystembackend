@@ -88,14 +88,14 @@ const forgetPassword = async (req, res) => {
     console.log("env: ", process.env.EMAIL, process.env.PASSWORD_APP_EMAIL);
 
     const transporter = nodemailer.createTransport({
-      service: "gmail", // Use your email service provider
+      service: "gmail", 
       auth: {
-        user: "neeraj@antheminfotech.com", // Your email address
-        pass: "pcwgfixsrnvingtv", // Your email password or app-specific password
+        user: "neeraj@antheminfotech.com", 
+        pass: "pcwgfixsrnvingtv",
       },
     });
 
-    const resetLink = `https://resoursemanagemntsystem-bksn.vercel.app/resetpassword/${token}`;
+    const resetLink = `https://resoursemanagemntsystem.vercel.app/resetpassword/${token}`;
 
     const mailOptions = {
       from: process.env.EMAIL,
