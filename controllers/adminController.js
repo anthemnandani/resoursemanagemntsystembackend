@@ -45,7 +45,7 @@ const login = async (req, res) => {
     if (!admin)
       return res
         .status(400)
-        .json({ success: false, error: "Employee with this email not exists" });
+        .json({ success: false, error: "Admin with this email not exists" });
 
     const isMatch = await bcrypt.compare(password, admin.password);
     if (!isMatch)
