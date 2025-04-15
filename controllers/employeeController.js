@@ -28,7 +28,7 @@ const createEmployee = async (req, res) => {
       }
     }
 
-    const { name, email, position, department } = req.body;
+    const { name, email, position, department, hireDate } = req.body;
 
     if (!name || !email || !position || !department) {
       return res.status(400).json({ success: false, error: 'All fields are required' });
@@ -45,6 +45,7 @@ const createEmployee = async (req, res) => {
       position,
       department,
       profilePicture,
+      hireDate,
       status: 'Active'
     });
 
@@ -99,7 +100,7 @@ const getAllEmployees = async (req, res) => {
 // Update Employee
 const updateEmployee = async (req, res) => {
   try {
-    const { name, position, department, status } = req.body;
+    const { name, position, department, hireDate, status } = req.body;
     const employee = await Employee.findById(req.params.id);
     
     if (!employee || employee.isDeleted) {
@@ -132,6 +133,7 @@ const updateEmployee = async (req, res) => {
     employee.name = name || employee.name;
     employee.position = position || employee.position;
     employee.department = department || employee.department;
+    employee.hireDate = hireDate || employee.hireDate;
     employee.status = status || employee.status;
 
     await employee.save();

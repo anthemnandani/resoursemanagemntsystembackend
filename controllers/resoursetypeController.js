@@ -23,7 +23,8 @@ const createResourceType = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: resourceType
+      data: resourceType,
+      message: "Resource type created successfully",
     });
   } catch (error) {
     if (error.code === 11000) {
@@ -75,7 +76,8 @@ const updateResourceType = async (req, res) => {
 
     res.json({
       success: true,
-      data: resourceType
+      data: resourceType,
+      message: "Resource type updated successfully",
     });
   } catch (error) {
     if (error.code === 11000) {
