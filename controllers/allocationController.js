@@ -168,7 +168,6 @@ const getEmployeeAllocations = async (req, res) => {
   }
 };
 
-
 // Get Current Allocations (Active)
 const getCurrentAllocations = async (req, res) => {
   try {

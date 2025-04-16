@@ -152,7 +152,6 @@ const updateEmployee = async (req, res) => {
   }
 };
 
-
 // Soft Delete Employee
 const deleteEmployee = async (req, res) => {
   try {
@@ -160,6 +159,19 @@ const deleteEmployee = async (req, res) => {
     if (!employee || employee.isDeleted) {
       return res.status(404).json({ error: 'Employee not found' });
     }
+
+        // Check if employee has any active allocations
+        const activeAllocations = await Allocation.find({
+          employee: employee._id,
+          status: 'Active',
+        });
+    
+        if (activeAllocations.length > 0) {
+          return res.status(400).json({
+            error: 'Cannot delete employee with allocated resources. Please return all resources first.',
+            activeAllocations,
+          });
+        }    
 
     employee.isDeleted = true;
     employee.status = 'Inactive';
