@@ -250,7 +250,6 @@ const updateResource = async (req, res) => {
   }
 };
 
-
 // Get All Resources (excluding deleted)
 const getAllResources = async (req, res) => {
   try {
@@ -258,11 +257,26 @@ const getAllResources = async (req, res) => {
       .populate("resourceType", "name")
       .sort({ createdAt: -1 });
 
+    const resourcesWithAllocations = await Promise.all(
+      resources.map(async (resource) => {
+        const allocationCount = await Allocation.countDocuments({
+          resource: resource._id,
+          status: { $ne: "Returned" }, // only active allocations
+        });
+
+        return {
+          ...resource.toObject(),
+          allocatedResourceCount: allocationCount,
+        };
+      })
+    );
+
     res.json({
       success: true,
-      data: resources,
+      data: resourcesWithAllocations,
     });
   } catch (error) {
+    console.error("Error fetching resources:", error);
     res.status(500).json({
       success: false,
       error: "Server error",

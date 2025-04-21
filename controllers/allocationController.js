@@ -26,8 +26,13 @@ const allocateResource = async (req, res) => {
     }
 
     // Check if resource is Available
-    if (resource.status !== "Available" || resource.avaliableResourceCount === 0) {
-      return res.status(400).json({ error: "No Available resources for allocation" });
+    if (
+      resource.status !== "Available" ||
+      resource.avaliableResourceCount === 0
+    ) {
+      return res
+        .status(400)
+        .json({ error: "No Available resources for allocation" });
     }
 
     const existingAllocation = await Allocation.findOne({
@@ -37,7 +42,9 @@ const allocateResource = async (req, res) => {
     });
 
     if (existingAllocation) {
-      return res.status(400).json({ error: "Resource is already allocated to this employee" });
+      return res
+        .status(400)
+        .json({ error: "Resource is already allocated to this employee" });
     }
 
     // Create new allocation
@@ -48,7 +55,10 @@ const allocateResource = async (req, res) => {
     });
 
     // Update resource status and count
-    resource.avaliableResourceCount = Math.max(resource.avaliableResourceCount - 1, 0);
+    resource.avaliableResourceCount = Math.max(
+      resource.avaliableResourceCount - 1,
+      0
+    );
 
     // If no resources left, mark as Allocated
     if (resource.avaliableResourceCount === 0) {
@@ -134,12 +144,15 @@ const getEmployeeAllocations = async (req, res) => {
       return res.status(404).json({ error: "Employee not found" });
     }
 
-    const allocations = await Allocation.find({ employee: employeeId })
+    const allocations = await Allocation.find({
+      employee: employeeId,
+      status: { $ne: "Returned" },
+    })
       .populate({
         path: "resource",
         populate: {
-          path: "resourceType", 
-          model: "ResourceType", 
+          path: "resourceType",
+          model: "ResourceType",
         },
       })
       .sort({ AllocatedDate: -1 });
@@ -168,6 +181,45 @@ const getEmployeeAllocations = async (req, res) => {
   }
 };
 
+const getResourceAllocations = async (req, res) => {
+  try {
+    const { resourceId } = req.params;
+
+    const resource = await Resource.findById(resourceId);
+    if (!resource) {
+      return res.status(404).json({ error: "Resource not found" });
+    }
+
+    const allocations = await Allocation.find({
+      resource: resourceId,
+      status: { $ne: "Returned" },
+    })
+      .populate("employee") // Get employee details
+      .sort({ AllocatedDate: -1 });
+
+    res.json({
+      success: true,
+      resource: {
+        id: resource._id,
+        name: resource.name,
+        type: resource.resourceType,
+      },
+      totalAllocations: allocations.length,
+      allocations: allocations.map((allocation) => ({
+        employeeId: allocation.employee?._id || null,
+        employeeName: allocation.employee?.name || "N/A",
+        employeePosition: allocation.employee?.position || "N/A",
+        allocationDate: allocation.AllocatedDate,
+        returnDate: allocation.returnDate,
+        status: allocation.status,
+      })),
+    });
+  } catch (error) {
+    console.error("Error fetching resource allocations:", error);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
 // Get Current Allocations (Active)
 const getCurrentAllocations = async (req, res) => {
   try {
@@ -186,5 +238,6 @@ module.exports = {
   returnResource,
   getAllAllocations,
   getEmployeeAllocations,
+  getResourceAllocations,
   getCurrentAllocations,
 };
