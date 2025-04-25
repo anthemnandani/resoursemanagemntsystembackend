@@ -126,9 +126,14 @@ const returnResource = async (req, res) => {
 const getAllAllocations = async (req, res) => {
   try {
     const allocations = await Allocation.find()
-      .populate("employee", "name email position department")
-      .populate("resource", "name type");
-
+    .populate("employee", "name email position department")
+    .populate({
+      path: "resource",
+      populate: {
+        path: "resourceType",
+        select: "name"
+      }
+    });
     res.json(allocations);
   } catch (error) {
     res.status(500).json({ error: error.message });
